@@ -11,7 +11,7 @@ class GraphConvolution(Module):
     Simple GCN layer, similar to https://arxiv.org/abs/1609.02907
     """
 
-    def __init__(self, in_features, out_features, bias=False, init='xavier'):
+    def __init__(self, in_features, out_features, bias=True, init='xavier'):
         super(GraphConvolution, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
@@ -49,8 +49,8 @@ class GraphConvolution(Module):
             nn.init.constant_(self.bias.data, 0.0)
 
     def forward(self, input, adj):
-        #support = torch.mm(input, self.weight)
-        support = input
+        support = torch.mm(input, self.weight)
+        #support = input
         output = torch.spmm(adj, support)
         if self.bias is not None:
             return output + self.bias
@@ -91,7 +91,7 @@ class GraphAttention(nn.Module):
         e = self.leakyrelu(f_1 + f_2.transpose(0,1))
 
         zero_vec = -9e15*torch.ones_like(e)
-        attention = torch.where(adj > 0, e, zero_vec)
+        attention = torch.where(adj > 0, adj*e, zero_vec)
         attention = F.softmax(attention, dim=1)
         attention = F.dropout(attention, self.dropout, training=self.training)
         h_prime = torch.matmul(attention, h)

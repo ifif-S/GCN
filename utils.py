@@ -3,6 +3,8 @@ import pickle as pkl
 import networkx as nx
 import scipy.sparse as sp
 import torch
+import random
+from collections import defaultdict as dd
 from scipy.sparse import csgraph
 
 def parse_index_file(filename):
@@ -128,4 +130,65 @@ def load_data(path="./data", dataset="cora"):
 
         labels = torch.LongTensor(save_label)
 
-    return adj, features, labels, idx_train, idx_val, idx_test
+    return adj, features, labels, idx_train, idx_val, idx_test, allx, y, x.shape[0],graph
+
+def gen_label_graph(x_size,nclass, allx, y):
+    """generator for batches for label context loss.
+    """
+    labels, label2inst, not_label = [], dd(list), dd(list)
+    for i in range(x_size):
+        flag = False
+        for j in range(nclass):
+            if y[i, j] == 1 and not flag:
+                labels.append(j)
+                label2inst[j].append(i)
+                flag = True
+            elif y[i, j] == 0:
+                not_label[j].append(i)
+
+    while True:
+        g = []
+        ind = np.random.permutation(x_size)
+        for i in range(len(ind)):        
+            x1 = ind[i]
+            label = labels[x1]
+            if len(label2inst) == 1: continue
+            x2 = random.choice(label2inst[label])
+            g.append([x1, x2])
+        g = np.array(g, dtype = np.int32)
+        yield allx[g[:, 0]], g[:, 1]
+        
+def gen_graph( graph, features, path_size = 10, window_size=3):
+    """generator for batches for graph context loss.
+    """
+    adj = nx.adjacency_matrix(nx.from_dict_of_lists(graph))
+    num_x = adj.shape[0]
+    while True:
+        ind = np.random.permutation(num_x)
+        g = []
+        for k in range(len(ind)):
+            if len(graph[k]) == 0: continue
+            path = [k]
+            for _ in range(path_size):
+                path.append(random.choice(graph[path[-1]]))
+                for l in range(len(path)):
+                    if path[l] >= num_x: continue
+                    for m in range(l - window_size, l + window_size + 1):
+                        if m < 0 or m >= len(path): continue
+                        if path[m] >= num_x: continue
+                        g.append([path[l], path[m]])
+        g = np.array(g, dtype = np.int32)
+        g_0 = g[:, 0]
+        g_1 = g[:, 1]
+        idxs=random.sample(range(len(g)), num_x)
+        g_0=[g_0[i] for i in idxs]
+        g_1=[g_1[i] for i in idxs]
+        yield features[g_0], g_1
+        
+
+                
+                
+                    
+                
+
+
