@@ -1,13 +1,3 @@
-# ************************************************************
-# Author : Bumsoo Kim, 2018
-# Github : https://github.com/meliketoy/graph-cnn.pytorch
-#
-# Korea University, Data-Mining Lab
-# Graph Convolutional Neural Network
-#
-# Description : train.py
-# The main code for training classification networks.
-# ***********************************************************
 
 import time
 import random
